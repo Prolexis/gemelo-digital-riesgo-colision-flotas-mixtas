@@ -44,23 +44,26 @@ export default function Navbar() {
   const badge = getRoleBadge(user?.role);
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800">
+    <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-cyan-500/20 shadow-2xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
         <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="p-2 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 text-white shadow-lg group-hover:scale-105 transition-transform">
-            <ShieldAlert className="w-6 h-6" />
+          <div className="p-2.5 rounded-xl bg-gradient-to-tr from-cyan-600 via-blue-600 to-indigo-600 text-white shadow-lg shadow-cyan-500/30 group-hover:scale-105 group-hover:shadow-cyan-500/50 transition-all duration-300">
+            <ShieldAlert className="w-6 h-6 animate-pulse" />
           </div>
           <div>
-            <h1 className="text-base font-extrabold text-white tracking-wide flex items-center gap-2">
-              MINING TWIN 3D <span className="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-mono">XAI SHAP</span>
+            <h1 className="text-base font-black tracking-wider text-white flex items-center gap-2">
+              <span className="gradient-text-cyan">MINESAFE 3D</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 shadow-inner">
+                XAI SHAP v2.5
+              </span>
             </h1>
-            <p className="text-[11px] text-slate-400">Predicción de Colisión en Minas • Flotas Mixtas</p>
+            <p className="text-[10px] font-medium text-slate-400 tracking-tight">Gemelo Digital 3D • Flotas Mixtas Tajo Abierto</p>
           </div>
         </Link>
 
         {/* Links */}
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1.5 bg-slate-900/60 p-1.5 rounded-xl border border-slate-800">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive = pathname === link.href;
@@ -68,13 +71,13 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all duration-200 ${
                   isActive
-                    ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/50 shadow-md shadow-cyan-500/20'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
                 {link.label}
               </Link>
             );
@@ -83,15 +86,15 @@ export default function Navbar() {
 
         {/* User Role Indicator & Logout Button */}
         <div className="flex items-center gap-3">
-          <Link href="/profile" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+          <Link href="/profile" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-bold text-slate-200">{user?.full_name || 'Usuario Demo'}</p>
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase ${badge.color}`}>
+              <p className="text-xs font-extrabold text-slate-100 tracking-wide">{user?.full_name || 'Usuario Demo'}</p>
+              <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${badge.color}`}>
                 {badge.label}
               </span>
             </div>
-            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-cyan-400">
-              <User className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-cyan-500/30 flex items-center justify-center text-xs font-bold text-cyan-400 shadow-md">
+              <User className="w-4 h-4 text-cyan-400" />
             </div>
           </Link>
 
@@ -99,10 +102,10 @@ export default function Navbar() {
           <button
             onClick={handleLogout}
             title="Cerrar Sesión"
-            className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all flex items-center gap-1 text-xs"
+            className="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 transition-all flex items-center gap-1.5 text-xs font-bold"
           >
             <LogOut className="w-4 h-4" />
-            <span className="hidden md:inline font-semibold">Salir</span>
+            <span className="hidden md:inline">Salir</span>
           </button>
         </div>
       </div>
