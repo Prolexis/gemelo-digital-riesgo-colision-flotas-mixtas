@@ -7,8 +7,14 @@ equipo para generar, vía Gemini, un diagnóstico de causas raíz y recomendacio
 import json
 import logging
 
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+    GENAI_AVAILABLE = True
+except Exception:
+    GENAI_AVAILABLE = False
+    genai = None
+    types = None
 
 from app.core.config import settings
 
@@ -19,7 +25,9 @@ class GeminiServiceError(Exception):
     pass
 
 
-def _get_client() -> genai.Client:
+def _get_client():
+    if not GENAI_AVAILABLE:
+        raise GeminiServiceError("Librería google-genai no está disponible en la instalación actual")
     if not settings.GEMINI_API_KEY:
         raise GeminiServiceError("GEMINI_API_KEY no está configurada en el entorno")
     return genai.Client(api_key=settings.GEMINI_API_KEY)

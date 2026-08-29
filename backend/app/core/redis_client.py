@@ -6,7 +6,12 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
-import redis.asyncio as aioredis
+try:
+    import redis.asyncio as aioredis
+    REDIS_AVAILABLE = True
+except Exception:
+    REDIS_AVAILABLE = False
+    aioredis = None
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -18,6 +23,10 @@ class RedisManager:
         self.client: Optional[aioredis.Redis] = None
 
     async def connect(self):
+        if not REDIS_AVAILABLE:
+            logger.warning("Librería redis no disponible. Operando en modo fallback.")
+            self.client = None
+            return
         try:
             self.client = aioredis.from_url(self.redis_url, decode_responses=True)
             await self.client.ping()

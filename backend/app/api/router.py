@@ -1,3 +1,5 @@
+from fastapi import APIRouter
+
 from app.api.routers import ai, alerts, auth, equipment, ethics, maintenance, reports, scenarios, telemetry, websocket
 
 api_router = APIRouter()
