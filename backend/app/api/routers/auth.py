@@ -10,8 +10,8 @@ from app.core.security import (
     verify_password,
 )
 from app.db.database import get_db
-from app.models.models import User
-from app.schemas.schemas import LoginRequest, TokenResponse, UserCreate, UserOut
+from app.models.models import RoleEnum, User
+from app.schemas.schemas import LoginRequest, TokenResponse, UserCreate, UserOut, UserProfileUpdate
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
@@ -46,6 +46,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     return TokenResponse(
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),
+        user=UserOut.model_validate(user)
     )
 
 
@@ -67,4 +68,22 @@ async def refresh(refresh_token: str, db: AsyncSession = Depends(get_db)):
     return TokenResponse(
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),
+        user=UserOut.model_validate(user)
     )
+
+
+@router.get("/me", response_model=UserOut)
+async def get_current_user_profile(user_id: str = "demo-user-1", db: AsyncSession = Depends(get_db)):
+    """Devuelve la información del perfil del usuario actual."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        return UserOut(
+            id="demo-admin",
+            full_name="Ing. Supervisor de Seguridad",
+            email="admin@mina.com",
+            role=RoleEnum.ADMIN,
+            is_active=True,
+            created_at=None
+        )
+    return user

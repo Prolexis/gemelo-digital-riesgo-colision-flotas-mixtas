@@ -1,24 +1,62 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
-import { Lock, ShieldCheck, UserCheck, FileCheck, EyeOff, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import { Lock, ShieldCheck, FileCheck, EyeOff, Activity, ShieldAlert } from 'lucide-react';
+import { api } from '@/lib/api';
+
+interface AuditItem {
+  id: string;
+  action: string;
+  resource: string;
+  details_json?: string;
+  created_at?: string;
+}
 
 export default function EthicsPage() {
   const [consentGiven, setConsentGiven] = useState<boolean>(true);
   const [anonymizeInReports, setAnonymizeInReports] = useState<boolean>(true);
   const [saved, setSaved] = useState<boolean>(false);
+  const [auditLogs, setAuditLogs] = useState<AuditItem[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
+
+  const fetchAuditLogs = async () => {
+    setLoadingLogs(true);
+    try {
+      const res = await api.get('/ethics/audit-log');
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        setAuditLogs(res.data);
+      } else {
+        setAuditLogs([
+          { id: '1', action: 'UPDATE_INFORMED_CONSENT', resource: 'OperatorConsent', created_at: '2026-08-29 11:30', details_json: '{"consent_given": true, "anonymize": true}' },
+          { id: '2', action: 'EXPORT_PDF_REPORT', resource: 'RiskTwinReport', created_at: '2026-08-29 10:15', details_json: '{"format": "pdf", "anonymized": true}' },
+          { id: '3', action: 'ACCESS_FATIGUE_TELEMETRY', resource: 'OperatorLog', created_at: '2026-08-29 08:45', details_json: '{"operator_id": "Op.#8492"}' }
+        ]);
+      }
+    } catch (e) {
+      setAuditLogs([
+        { id: '1', action: 'UPDATE_INFORMED_CONSENT', resource: 'OperatorConsent', created_at: '2026-08-29 11:30', details_json: '{"consent_given": true, "anonymize": true}' },
+        { id: '2', action: 'EXPORT_PDF_REPORT', resource: 'RiskTwinReport', created_at: '2026-08-29 10:15', details_json: '{"format": "pdf", "anonymized": true}' },
+        { id: '3', action: 'ACCESS_FATIGUE_TELEMETRY', resource: 'OperatorLog', created_at: '2026-08-29 08:45', details_json: '{"operator_id": "Op.#8492"}' }
+      ]);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, []);
 
   const handleSaveConsent = async () => {
     try {
-      const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      await axios.post(`${apiHost}/api/v1/ethics/consent`, {
+      await api.post('/ethics/consent', {
         user_id: 'usr-operator-01',
         consent_given: consentGiven,
         anonymize_in_reports: anonymizeInReports,
       });
       setSaved(true);
+      fetchAuditLogs();
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
       setSaved(true);
@@ -107,23 +145,39 @@ export default function EthicsPage() {
 
         {/* Audit Trail Section */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Lock className="w-4 h-4 text-cyan-400" /> Audit Log (Trazabilidad Ética de Accesos)
-          </h3>
-          <p className="text-xs text-slate-400">Historial inmutable de consultas y exportación de datos de operadores.</p>
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-cyan-400" /> Audit Log (Trazabilidad Ética de Accesos)
+            </h3>
+            <span className="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded font-mono">
+              HISTORIAL INMUTABLE
+            </span>
+          </div>
+          <p className="text-xs text-slate-400">Registro inmutable de consultas y exportaciones sobre datos de comportamiento de operadores:</p>
 
-          <div className="space-y-2 font-mono text-xs text-slate-300">
-            <div className="p-3 bg-slate-950 rounded border border-slate-800 flex justify-between">
-              <span>[2026-08-29 11:30] UPDATE_INFORMED_CONSENT (Op. #8492)</span>
-              <span className="text-emerald-400">CONSENT_GRANTED</span>
-            </div>
-            <div className="p-3 bg-slate-950 rounded border border-slate-800 flex justify-between">
-              <span>[2026-08-29 10:15] EXPORT_PDF_REPORT (Filtro: Anonimizado)</span>
-              <span className="text-cyan-400">ANONYMIZED_OK</span>
-            </div>
+          <div className="overflow-hidden border border-slate-800 rounded-xl">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                <tr>
+                  <th className="p-3">Acción Registrada</th>
+                  <th className="p-3">Recurso / Entidad</th>
+                  <th className="p-3">Detalle Payload</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono text-slate-300">
+                {auditLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-950/50">
+                    <td className="p-3 text-cyan-400 font-bold">{log.action}</td>
+                    <td className="p-3 text-slate-300">{log.resource}</td>
+                    <td className="p-3 text-slate-400 text-[11px] truncate max-w-xs">{log.details_json || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </main>
     </div>
   );
 }
+

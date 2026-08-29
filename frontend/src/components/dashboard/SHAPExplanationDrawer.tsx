@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { EquipmentTwinData, SHAPFactor } from '@/types/digital_twin';
-import { X, ShieldAlert, Cpu, Activity, UserCheck, AlertTriangle, Eye, Clock } from 'lucide-react';
+import { X, ShieldAlert, Cpu, Activity, UserCheck, AlertTriangle, Eye, Clock, Download, FileText, FileSpreadsheet, FileCode } from 'lucide-react';
+import { api } from '@/lib/api';
 
 interface SHAPExplanationDrawerProps {
   equipment: EquipmentTwinData | null;
@@ -13,7 +14,44 @@ export default function SHAPExplanationDrawer({
   equipment,
   onClose,
 }: SHAPExplanationDrawerProps) {
+  const [downloadingFormat, setDownloadingFormat] = useState<string | null>(null);
+
   if (!equipment) return null;
+
+  const handleDownloadReport = async (format: 'pdf' | 'xlsx' | 'docx') => {
+    setDownloadingFormat(format);
+    try {
+      const endpoint = `/reports/equipment/${equipment.code}/${format}`;
+      const res = await api.get(endpoint, { responseType: 'blob' });
+
+      if (res.data.type === 'application/json') {
+        const text = await res.data.text();
+        const json = JSON.parse(text);
+        throw new Error(json.detail || 'Error en el servidor');
+      }
+
+      const mimeTypes = {
+        pdf: 'application/pdf',
+        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      };
+
+      const blob = new Blob([res.data], { type: mimeTypes[format] });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `reporte_${equipment.code}.${format}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e: any) {
+      console.error('Error descargando reporte del equipo:', e);
+      alert(`Error descargando reporte ${format.toUpperCase()} para ${equipment.code}.`);
+    } finally {
+      setDownloadingFormat(null);
+    }
+  };
 
   const getRiskColor = (level: string) => {
     switch (level) {
@@ -97,6 +135,45 @@ export default function SHAPExplanationDrawer({
           </div>
         </div>
 
+        {/* Quick Report Download Actions */}
+        <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <Download className="w-4 h-4 text-cyan-400" /> Exportar Reporte de Equipo
+            </span>
+            <span className="text-[10px] text-slate-500 font-mono">PDF / Excel / Word</span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => handleDownloadReport('pdf')}
+              disabled={downloadingFormat === 'pdf'}
+              className="py-2 px-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              {downloadingFormat === 'pdf' ? 'PDF...' : 'PDF'}
+            </button>
+
+            <button
+              onClick={() => handleDownloadReport('xlsx')}
+              disabled={downloadingFormat === 'xlsx'}
+              className="py-2 px-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              {downloadingFormat === 'xlsx' ? 'Excel...' : 'Excel'}
+            </button>
+
+            <button
+              onClick={() => handleDownloadReport('docx')}
+              disabled={downloadingFormat === 'docx'}
+              className="py-2 px-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+            >
+              <FileCode className="w-3.5 h-3.5" />
+              {downloadingFormat === 'docx' ? 'Word...' : 'Word'}
+            </button>
+          </div>
+        </div>
+
         {/* SHAP Explanation Breakdown Section */}
         <div className="bg-slate-950/80 p-5 rounded-xl border border-slate-800 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
@@ -168,3 +245,4 @@ export default function SHAPExplanationDrawer({
     </div>
   );
 }
+

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useAuthStore } from "./authStore";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -8,7 +9,7 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = window.localStorage.getItem("access_token");
+    const token = useAuthStore.getState().token || window.localStorage.getItem("access_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

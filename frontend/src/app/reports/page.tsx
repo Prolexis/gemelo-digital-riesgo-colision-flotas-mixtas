@@ -2,29 +2,69 @@
 
 import React, { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
-import { FileText, Download, FileSpreadsheet, FileCode, CheckCircle2, ShieldCheck } from 'lucide-react';
-import axios from 'axios';
+import { FileText, Download, FileSpreadsheet, FileCode, CheckCircle2, ShieldCheck, AlertCircle, Lock } from 'lucide-react';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/lib/authStore';
 
 export default function ReportsPage() {
+  const user = useAuthStore((state) => state.user);
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const canExport = hasPermission('export');
+
   const [anonymize, setAnonymize] = useState<boolean>(true);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const downloadReport = async (format: 'pdf' | 'xlsx' | 'docx') => {
+    if (!canExport) {
+      setStatusMessage({
+        type: 'error',
+        text: `El rol actual (${user?.role || 'solo_lectura'}) no posee permisos granulares para exportar reportes. Contacta al Administrador.`,
+      });
+      return;
+    }
+
     setDownloading(format);
+    setStatusMessage(null);
+
     try {
-      const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const endpoint = `${apiHost}/api/v1/reports/equipment/ca-01/${format}`;
-      const res = await axios.get(endpoint, { responseType: 'blob' });
-      
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const endpoint = `/reports/risk-twin/${format}?anonymize=${anonymize}`;
+      const res = await api.get(endpoint, { responseType: 'blob' });
+
+      // Detect if backend returned a JSON error wrapped as blob
+      if (res.data.type === 'application/json') {
+        const text = await res.data.text();
+        const json = JSON.parse(text);
+        throw new Error(json.detail || 'Error desconocido del servidor');
+      }
+
+      const mimeTypes = {
+        pdf: 'application/pdf',
+        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      };
+
+      const blob = new Blob([res.data], { type: mimeTypes[format] });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `reporte_cuasi_colisiones_${anonymize ? 'anonimizado' : 'completo'}.${format}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (e) {
-      alert(`Generando reporte ${format.toUpperCase()} simulado de cuasi-colisiones con el motor backend.`);
+      window.URL.revokeObjectURL(url);
+
+      setStatusMessage({
+        type: 'success',
+        text: `¡Reporte ${format.toUpperCase()} generado y descargado con éxito!`,
+      });
+    } catch (e: any) {
+      console.error('Error generando reporte:', e);
+      const errMsg = e.response?.data?.detail || e.message || `Error descargando reporte ${format.toUpperCase()}.`;
+      setStatusMessage({
+        type: 'error',
+        text: `Error al descargar ${format.toUpperCase()}: ${errMsg}`,
+      });
     } finally {
       setDownloading(null);
     }
@@ -44,6 +84,32 @@ export default function ReportsPage() {
             Generación de reportes documentados de cuasi-colisiones, tiempos de alerta (Lead Time) y atribución de riesgo SHAP.
           </p>
         </div>
+
+        {!canExport && (
+          <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 flex items-center gap-3 text-xs font-semibold">
+            <Lock className="w-5 h-5 flex-shrink-0 text-amber-400" />
+            <span>
+              Restricción de Permisos RBAC: Tu rol actual (<strong className="uppercase">{user?.role}</strong>) no tiene permisos de exportación habilitados. Puedes cambiar a Administrador, Supervisor o Analista en tu Perfil para habilitar la descarga.
+            </span>
+          </div>
+        )}
+
+        {statusMessage && (
+          <div
+            className={`p-4 rounded-xl border flex items-center gap-3 text-xs font-semibold ${
+              statusMessage.type === 'success'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-red-500/10 border-red-500/30 text-red-400'
+            }`}
+          >
+            {statusMessage.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-400" />
+            )}
+            <span>{statusMessage.text}</span>
+          </div>
+        )}
 
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -73,11 +139,19 @@ export default function ReportsPage() {
 
               <button
                 onClick={() => downloadReport('pdf')}
-                disabled={downloading === 'pdf'}
-                className="w-full py-2.5 px-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all"
+                disabled={downloading === 'pdf' || !canExport}
+                className={`w-full py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${
+                  canExport
+                    ? 'bg-red-600 hover:bg-red-500 text-white'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                }`}
               >
                 <Download className="w-4 h-4" />
-                {downloading === 'pdf' ? 'Generando PDF...' : 'Exportar PDF'}
+                {!canExport
+                  ? 'Permiso Requerido'
+                  : downloading === 'pdf'
+                  ? 'Generando PDF...'
+                  : 'Exportar PDF'}
               </button>
             </div>
 
@@ -93,11 +167,19 @@ export default function ReportsPage() {
 
               <button
                 onClick={() => downloadReport('xlsx')}
-                disabled={downloading === 'xlsx'}
-                className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all"
+                disabled={downloading === 'xlsx' || !canExport}
+                className={`w-full py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${
+                  canExport
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                }`}
               >
                 <Download className="w-4 h-4" />
-                {downloading === 'xlsx' ? 'Generando Excel...' : 'Exportar Excel (.xlsx)'}
+                {!canExport
+                  ? 'Permiso Requerido'
+                  : downloading === 'xlsx'
+                  ? 'Generando Excel...'
+                  : 'Exportar Excel (.xlsx)'}
               </button>
             </div>
 
@@ -113,11 +195,19 @@ export default function ReportsPage() {
 
               <button
                 onClick={() => downloadReport('docx')}
-                disabled={downloading === 'docx'}
-                className="w-full py-2.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all"
+                disabled={downloading === 'docx' || !canExport}
+                className={`w-full py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${
+                  canExport
+                    ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                }`}
               >
                 <Download className="w-4 h-4" />
-                {downloading === 'docx' ? 'Generando Word...' : 'Exportar Word (.docx)'}
+                {!canExport
+                  ? 'Permiso Requerido'
+                  : downloading === 'docx'
+                  ? 'Generando Word...'
+                  : 'Exportar Word (.docx)'}
               </button>
             </div>
           </div>
@@ -126,3 +216,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
