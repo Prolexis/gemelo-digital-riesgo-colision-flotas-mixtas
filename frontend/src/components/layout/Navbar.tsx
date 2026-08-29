@@ -20,7 +20,8 @@ export default function Navbar() {
   const navLinks = [
     { href: '/dashboard', label: 'Gemelo 3D & Riesgo', icon: Cpu },
     { href: '/scenarios', label: 'Escenarios & Simulación', icon: PlayCircle },
-    { href: '/ethics', label: 'Ética & Privacidad', icon: Lock },
+    { href: '/profile', label: 'Roles & Permisos', icon: UserCheck },
+    { href: '/ethics', label: 'Ética & Auditoría', icon: Lock },
     { href: '/reports', label: 'Reportes & Exportación', icon: FileText },
     { href: '/architecture', label: 'Arquitectura & SQL', icon: Shield },
   ];
