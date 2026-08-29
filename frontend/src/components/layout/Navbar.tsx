@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShieldAlert, Cpu, FileText, Lock, PlayCircle, User, LogOut, Shield } from 'lucide-react';
+import { ShieldAlert, Cpu, FileText, Lock, PlayCircle, User, UserCheck, LogOut, Shield } from 'lucide-react';
 import { useAuthStore } from '@/lib/authStore';
 
 export default function Navbar() {
