@@ -76,124 +76,172 @@ export default function Mine3DTwinViewer({
     pointLight.position.set(0, 15, 0);
     scene.add(pointLight);
 
-    // 6. Terrain (Open-Pit Mine Benches)
+    // 6. Terrain (Open-Pit Mine Benches Cotas 3100m - 3600m & 9% Haul Ramp)
     const terrainGroup = new THREE.Group();
 
-    // Pit floor
-    const floorGeo = new THREE.PlaneGeometry(120, 120);
+    // Pit floor (Cota 3100m)
+    const floorGeo = new THREE.PlaneGeometry(140, 140);
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     terrainGroup.add(floor);
 
-    // Bench steps
-    const bench1Geo = new THREE.RingGeometry(15, 35, 32);
+    // Bench 1 Step (Cota 3350m)
+    const bench1Geo = new THREE.RingGeometry(18, 42, 36);
     const bench1Mat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9, side: THREE.DoubleSide });
     const bench1 = new THREE.Mesh(bench1Geo, bench1Mat);
     bench1.rotation.x = -Math.PI / 2;
-    bench1.position.y = 0.4;
+    bench1.position.y = 0.5;
     terrainGroup.add(bench1);
 
-    const bench2Geo = new THREE.RingGeometry(35, 55, 32);
+    // Bench 2 Step (Cota 3600m)
+    const bench2Geo = new THREE.RingGeometry(42, 65, 36);
     const bench2Mat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.9, side: THREE.DoubleSide });
     const bench2 = new THREE.Mesh(bench2Geo, bench2Mat);
     bench2.rotation.x = -Math.PI / 2;
-    bench2.position.y = 1.2;
+    bench2.position.y = 1.4;
     terrainGroup.add(bench2);
 
+    // 9% Haul Ramp Mesh (Connecting Cota 3100m to Cota 3600m)
+    const rampGeo = new THREE.BoxGeometry(8, 0.2, 50);
+    const rampMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+    const rampMesh = new THREE.Mesh(rampGeo, rampMat);
+    rampMesh.position.set(22, 0.75, 5);
+    rampMesh.rotation.x = 0.09; // 9% operational slope grade
+    rampMesh.rotation.y = -0.3;
+    terrainGroup.add(rampMesh);
+
     // Grid helper
-    const grid = new THREE.GridHelper(120, 40, 0x38bdf8, 0x1e293b);
+    const grid = new THREE.GridHelper(140, 40, 0x38bdf8, 0x1e293b);
     grid.position.y = 0.05;
     terrainGroup.add(grid);
 
     scene.add(terrainGroup);
 
-    // 7. Equipment 3D Mesh Generation & Placement
-    const interactiveMeshes: { mesh: THREE.Object3D; eq: EquipmentTwinData; auraMesh: THREE.Mesh }[] = [];
+    // 7. Equipment 3D Mesh Generation, LiDAR Cones & Predictive Trajectories
+    const interactiveMeshes: { mesh: THREE.Object3D; eq: EquipmentTwinData; auraMesh: THREE.Mesh; lidarCone: THREE.Mesh; pathLine: THREE.Line }[] = [];
 
-    const coordsList: [number, number, number][] = [
-      [-12, 0, 8],
-      [-4, 0, -2],
-      [14, 0, 12],
-      [-18, 0, -15],
-      [8, 0, -18],
+    const coordsList: [number, number, number, number][] = [
+      [-12, 0, 8, 0.4],     // x, y, z, rotationAngle
+      [-4, 0, -2, -0.6],
+      [14, 0, 12, 1.2],
+      [-18, 0, -15, 2.1],
+      [8, 0, -18, -1.8],
     ];
 
     fleet.forEach((eq, idx) => {
       const pos = coordsList[idx % coordsList.length];
       const eqGroup = new THREE.Group();
       eqGroup.position.set(pos[0], pos[1], pos[2]);
+      eqGroup.rotation.y = pos[3];
 
       const riskColor = getRiskColorHex(eq.risk_level);
 
-      // Risk Aura Cylinder Glow
-      const auraGeo = new THREE.CylinderGeometry(3.0, 3.0, 0.2, 32);
+      // Risk Aura Cylinder Glow (Verde, Amarillo, Naranja, Rojo)
+      const auraGeo = new THREE.CylinderGeometry(3.5, 3.5, 0.2, 32);
       const auraMat = new THREE.MeshBasicMaterial({
         color: riskColor,
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.4,
       });
       const auraMesh = new THREE.Mesh(auraGeo, auraMat);
       auraMesh.position.y = 0.1;
       eqGroup.add(auraMesh);
 
+      // Volumetric 3D LiDAR Scanning Cone (Frustum)
+      const coneGeo = new THREE.ConeGeometry(3.0, 7.0, 16, 1, true);
+      const coneMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.2,
+        wireframe: true,
+        side: THREE.DoubleSide,
+      });
+      const lidarCone = new THREE.Mesh(coneGeo, coneMat);
+      lidarCone.position.set(0, 1.2, 4.5);
+      lidarCone.rotation.x = Math.PI / 2;
+      eqGroup.add(lidarCone);
+
+      // Predictive Trajectory Vector Line (Lead Time ray)
+      const pathPoints = [
+        new THREE.Vector3(0, 0.3, 0),
+        new THREE.Vector3(0, 0.3, 6 + (eq.prediction_horizon_sec || 5.0) * 0.8),
+      ];
+      const pathGeo = new THREE.BufferGeometry().setFromPoints(pathPoints);
+      const pathMat = new THREE.LineDashedMaterial({
+        color: riskColor,
+        dashSize: 0.6,
+        gapSize: 0.3,
+        linewidth: 2,
+      });
+      const pathLine = new THREE.Line(pathGeo, pathMat);
+      pathLine.computeLineDistances();
+      eqGroup.add(pathLine);
+
       if (eq.equipment_type === 'shovel') {
-        // Shovel Base
-        const baseGeo = new THREE.BoxGeometry(3.2, 1.8, 3.4);
-        const baseMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.4 });
+        // Pala Eléctrica P&H 495HR
+        const baseGeo = new THREE.BoxGeometry(3.6, 2.0, 3.8);
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.4 });
         const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-        baseMesh.position.y = 1.0;
+        baseMesh.position.y = 1.1;
         eqGroup.add(baseMesh);
 
-        // Boom Arm
-        const boomGeo = new THREE.BoxGeometry(0.7, 4.0, 0.7);
-        const boomMat = new THREE.MeshStandardMaterial({ color: 0x475569 });
+        // Heavy Boom Arm
+        const boomGeo = new THREE.BoxGeometry(0.8, 4.5, 0.8);
+        const boomMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
         const boomMesh = new THREE.Mesh(boomGeo, boomMat);
-        boomMesh.position.set(0, 3.0, 1.5);
-        boomMesh.rotation.x = 0.6;
+        boomMesh.position.set(0, 3.2, 1.8);
+        boomMesh.rotation.x = 0.65;
         eqGroup.add(boomMesh);
+      } else if (eq.equipment_type === 'cargador') {
+        // Vehículo de Supervisión / Camioneta HSE
+        const bodyGeo = new THREE.BoxGeometry(1.6, 0.9, 2.6);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.5 });
+        const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+        bodyMesh.position.y = 0.6;
+        eqGroup.add(bodyMesh);
       } else {
-        // Haul Truck Chassis
-        const chassisColor = eq.fleet_type === 'autonomo' ? 0x3b82f6 : 0xd97706;
-        const chassisGeo = new THREE.BoxGeometry(2.4, 0.9, 4.0);
-        const chassisMat = new THREE.MeshStandardMaterial({ color: chassisColor, metalness: 0.3, roughness: 0.4 });
+        // Camiones CAT 797F (Manual d97706) vs Autonomous AHS (Cyan/Blue 3b82f6)
+        const chassisColor = eq.fleet_type === 'autonomo' ? 0x06b6d4 : 0xd97706;
+        const chassisGeo = new THREE.BoxGeometry(2.6, 1.0, 4.2);
+        const chassisMat = new THREE.MeshStandardMaterial({ color: chassisColor, metalness: 0.4, roughness: 0.3 });
         const chassisMesh = new THREE.Mesh(chassisGeo, chassisMat);
-        chassisMesh.position.y = 0.95;
+        chassisMesh.position.y = 1.0;
         eqGroup.add(chassisMesh);
 
-        // Cab
-        const cabGeo = new THREE.BoxGeometry(1.0, 0.9, 1.3);
-        const cabMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2 });
+        // Cabina
+        const cabGeo = new THREE.BoxGeometry(1.1, 1.0, 1.4);
+        const cabMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.2 });
         const cabMesh = new THREE.Mesh(cabGeo, cabMat);
-        cabMesh.position.set(0.6, 1.7, 1.1);
+        cabMesh.position.set(0.65, 1.8, 1.2);
         eqGroup.add(cabMesh);
 
-        // Dump Box (Caja)
-        const dumpGeo = new THREE.BoxGeometry(2.3, 1.1, 2.8);
-        const dumpMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 });
+        // Dump Box (Tolva)
+        const dumpGeo = new THREE.BoxGeometry(2.5, 1.2, 3.0);
+        const dumpMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5 });
         const dumpMesh = new THREE.Mesh(dumpGeo, dumpMat);
-        dumpMesh.position.set(0, 1.8, -0.6);
+        dumpMesh.position.set(0, 1.9, -0.6);
         dumpMesh.rotation.x = -0.12;
         eqGroup.add(dumpMesh);
 
         // Wheels
         [
-          [-1.25, 0.55, -1.3],
-          [1.25, 0.55, -1.3],
-          [-1.25, 0.55, 1.3],
-          [1.25, 0.55, 1.3],
-        ].forEach((wheelPos) => {
-          const wheelGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.45, 16);
-          const wheelMat = new THREE.MeshStandardMaterial({ color: 0x090d16 });
+          [-1.3, 0.6, -1.4],
+          [1.3, 0.6, -1.4],
+          [-1.3, 0.6, 1.4],
+          [1.3, 0.6, 1.4],
+        ].forEach((wPos) => {
+          const wheelGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.5, 16);
+          const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
           const wheelMesh = new THREE.Mesh(wheelGeo, wheelMat);
           wheelMesh.rotation.z = Math.PI / 2;
-          wheelMesh.position.set(wheelPos[0], wheelPos[1], wheelPos[2]);
+          wheelMesh.position.set(wPos[0], wPos[1], wPos[2]);
           eqGroup.add(wheelMesh);
         });
       }
 
       scene.add(eqGroup);
-      interactiveMeshes.push({ mesh: eqGroup, eq, auraMesh });
+      interactiveMeshes.push({ mesh: eqGroup, eq, auraMesh, lidarCone, pathLine });
     });
 
     // 8. Raycasting Interactivity
