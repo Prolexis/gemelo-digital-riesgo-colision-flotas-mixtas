@@ -22,6 +22,7 @@ export default function Navbar() {
     { href: '/scenarios', label: 'Escenarios & Simulación', icon: PlayCircle },
     { href: '/ethics', label: 'Ética & Privacidad', icon: Lock },
     { href: '/reports', label: 'Reportes & Exportación', icon: FileText },
+    { href: '/architecture', label: 'Arquitectura & SQL', icon: Shield },
   ];
 
   const getRoleBadge = (roleStr?: string) => {
