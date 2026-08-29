@@ -241,6 +241,7 @@ export default function SHAPExplanationDrawer({
             {equipment.recommended_action}
           </p>
         </div>
+      </div>
     </div>
   );
 }
