@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
-import { Play, ShieldAlert, Cpu, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Play, ShieldAlert, Cpu, AlertCircle, CheckCircle2, Clock, BarChart2 } from 'lucide-react';
 import axios from 'axios';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 
 interface Scenario {
   id: string;
@@ -254,22 +255,44 @@ export default function ScenariosPage() {
                   </div>
                 </div>
 
-                {/* SHAP Breakdown */}
-                <div className="bg-slate-950 p-5 rounded-lg border border-slate-800 space-y-3">
-                  <h4 className="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-wider">
-                    <Cpu className="w-4 h-4 text-cyan-400" /> Explicación SHAP (Desglose Aditivo Inyectado)
-                  </h4>
-                  <div className="space-y-3">
+                {/* SHAP Breakdown Chart */}
+                <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4 shadow-2xl">
+                  <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <h4 className="text-xs font-black text-white flex items-center gap-2 uppercase tracking-wider">
+                      <Cpu className="w-4 h-4 text-cyan-400 animate-pulse" /> Explicación SHAP (Desglose Aditivo Inyectado en Vivo)
+                    </h4>
+                    <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950 border border-cyan-800 px-2 py-0.5 rounded font-bold">
+                      FAST TREESHAP
+                    </span>
+                  </div>
+
+                  <div className="h-44 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={simulationResult.prediction_result.shap_factors.map((f: any) => ({
+                          feature: f.feature_name.split(' ')[0] + ' ' + (f.feature_name.split(' ')[1] || ''),
+                          weight: parseFloat(f.weight_percentage),
+                        }))}
+                        layout="vertical"
+                        margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                      >
+                        <XAxis type="number" stroke="#64748b" fontSize={10} unit="%" />
+                        <YAxis dataKey="feature" type="category" stroke="#94a3b8" fontSize={10} width={130} />
+                        <Tooltip contentStyle={{ backgroundColor: '#090d16', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }} />
+                        <Bar dataKey="weight" radius={[0, 4, 4, 0]}>
+                          {simulationResult.prediction_result.shap_factors.map((_: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : index === 1 ? '#f59e0b' : '#06b6d4'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="space-y-2 pt-1 border-t border-slate-800/80">
                     {simulationResult.prediction_result.shap_factors.map((f: any, idx: number) => (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-300 font-medium">{f.feature_name}</span>
-                          <span className="font-mono text-cyan-400 font-bold">+{f.weight_percentage}%</span>
-                        </div>
-                        <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
-                          <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${Math.min(100, f.weight_percentage * 2)}%` }} />
-                        </div>
-                        <p className="text-[10px] text-slate-500">{f.description}</p>
+                      <div key={idx} className="flex justify-between items-center text-xs font-mono">
+                        <span className="text-slate-300 font-medium">{f.feature_name}</span>
+                        <span className="text-cyan-400 font-bold">+{f.weight_percentage}%</span>
                       </div>
                     ))}
                   </div>

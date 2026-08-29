@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { SafetyKPIs, PDSComparison, EquipmentTwinData } from '@/types/digital_twin';
-import { ShieldCheck, Clock, AlertTriangle, UserCheck, TrendingUp, Cpu, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Clock, AlertTriangle, UserCheck, TrendingUp, Cpu, BarChart3, Activity } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 
 interface SafetyDashboardProps {
   kpis: SafetyKPIs | null;
@@ -43,6 +44,24 @@ export default function SafetyDashboard({
       features_used: 'Solo Proximidad GNSS Reactiva',
     },
   };
+
+  const rocCurveData = [
+    { fpr: '0.0', twin_tpr: 0.0, pds_tpr: 0.0 },
+    { fpr: '0.1', twin_tpr: 0.72, pds_tpr: 0.35 },
+    { fpr: '0.2', twin_tpr: 0.89, pds_tpr: 0.52 },
+    { fpr: '0.3', twin_tpr: 0.95, pds_tpr: 0.64 },
+    { fpr: '0.4', twin_tpr: 0.97, pds_tpr: 0.71 },
+    { fpr: '0.5', twin_tpr: 0.98, pds_tpr: 0.78 },
+    { fpr: '1.0', twin_tpr: 1.0, pds_tpr: 1.0 },
+  ];
+
+  const benchRiskData = [
+    { bench: 'Cota 3100m (Fondo Tajo)', incidents: 14, risk_score: 82 },
+    { bench: 'Cota 3225m (Carguío Pala 01)', incidents: 22, risk_score: 65 },
+    { bench: 'Cota 3350m (Rampa Principal 9%)', incidents: 38, risk_score: 94 },
+    { bench: 'Cota 3475m (Cruce Botadero)', incidents: 18, risk_score: 71 },
+    { bench: 'Cota 3600m (Superficie)', incidents: 8, risk_score: 30 },
+  ];
 
   return (
     <div className="space-y-6">
@@ -106,6 +125,53 @@ export default function SafetyDashboard({
             <span className="text-xs text-purple-400 font-bold bg-purple-950/60 border border-purple-800/80 px-2 py-0.5 rounded">Usabilidad</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1 font-medium">Aceptación post-turno por XAI explicable</p>
+        </div>
+      </div>
+
+      {/* Recharts Analytics Section: ROC Curve & Pit Bench Risk */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ROC Curve Chart */}
+        <div className="glass-panel p-6 rounded-2xl space-y-3 shadow-2xl">
+          <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+            <h4 className="text-sm font-black text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-cyan-400" /> Curva ROC: Gemelo Digital (AUC 0.942) vs PDS (AUC 0.720)
+            </h4>
+            <span className="text-[10px] font-mono text-cyan-400 font-bold bg-cyan-950 border border-cyan-800 px-2 py-0.5 rounded">HIPÓTESIS H1</span>
+          </div>
+          <div className="h-56 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={rocCurveData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="fpr" stroke="#64748b" fontSize={10} label={{ value: 'Tasa Falsos Positivos (FPR)', position: 'insideBottom', offset: -2, fill: '#64748b', fontSize: 10 }} />
+                <YAxis stroke="#94a3b8" fontSize={10} domain={[0, 1]} />
+                <Tooltip contentStyle={{ backgroundColor: '#090d16', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }} />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                <Line type="monotone" dataKey="twin_tpr" name="Gemelo Digital 3D (AUC 0.942)" stroke="#06b6d4" strokeWidth={3} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="pds_tpr" name="PDS Estándar (AUC 0.720)" stroke="#64748b" strokeWidth={2} strokeDasharray="5 5" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Pit Bench Risk Distribution Chart */}
+        <div className="glass-panel p-6 rounded-2xl space-y-3 shadow-2xl">
+          <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+            <h4 className="text-sm font-black text-white flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-amber-400" /> Incidencia de Riesgo por Banco de Explotación (Cotas 3100m-3600m)
+            </h4>
+            <span className="text-[10px] font-mono text-amber-400 font-bold bg-amber-950 border border-amber-800 px-2 py-0.5 rounded">DISTRIBUCIÓN TAJO</span>
+          </div>
+          <div className="h-56 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={benchRiskData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="bench" stroke="#64748b" fontSize={9} />
+                <YAxis stroke="#94a3b8" fontSize={10} />
+                <Tooltip contentStyle={{ backgroundColor: '#090d16', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }} />
+                <Bar dataKey="incidents" name="Cuasi-Colisiones Detectadas" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 

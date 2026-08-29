@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import { useAuthStore, Role } from '@/lib/authStore';
-import { User, Shield, Mail, CheckCircle2, Lock, ShieldCheck, Check, X } from 'lucide-react';
+import { User, Shield, Mail, CheckCircle2, Lock, ShieldCheck, Check, X, BarChart2 } from 'lucide-react';
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip } from 'recharts';
 
 export default function ProfilePage() {
   const user = useAuthStore((state) => state.user);
@@ -155,37 +156,66 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Role Simulator Panel */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-            <h2 className="text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Shield className="w-4 h-4 text-purple-400" /> Simulador de Roles
-            </h2>
+          {/* Role Simulator & Permission Radar Chart Panel */}
+          <div className="space-y-6">
+            <div className="glass-panel border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+              <h2 className="text-base font-black text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                <Shield className="w-5 h-5 text-purple-400" /> Simulador de Roles (RBAC)
+              </h2>
 
-            <p className="text-xs text-slate-400">
-              Selecciona un rol para probar los permisos granulares del sistema en tiempo real:
-            </p>
+              <p className="text-xs text-slate-400 font-medium">
+                Selecciona un rol para probar los permisos granulares del sistema en tiempo real:
+              </p>
 
-            <div className="space-y-2 pt-1">
-              {rolesList.map((item) => {
-                const isActive = user?.role === item.role;
-                return (
-                  <div
-                    key={item.role}
-                    onClick={() => setRole(item.role)}
-                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                      isActive
-                        ? 'bg-purple-950/60 border-purple-500 text-white shadow-lg'
-                        : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span>{item.label}</span>
-                      {isActive && <span className="text-[10px] text-purple-300 font-mono">ACTIVO</span>}
+              <div className="space-y-2 pt-1">
+                {rolesList.map((item) => {
+                  const isActive = user?.role === item.role;
+                  return (
+                    <div
+                      key={item.role}
+                      onClick={() => setRole(item.role)}
+                      className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                        isActive
+                          ? 'bg-purple-950/60 border-purple-500 text-white shadow-lg shadow-purple-500/20 ring-1 ring-purple-500'
+                          : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs font-bold">
+                        <span>{item.label}</span>
+                        {isActive && <span className="text-[10px] text-purple-300 font-mono font-bold bg-purple-900/80 px-2 py-0.5 rounded">ACTIVO</span>}
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 font-medium leading-snug">{item.desc}</p>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1">{item.desc}</p>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Radar Chart: Cobertura de Permisos */}
+            <div className="glass-panel border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-3">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 className="text-xs font-black text-white flex items-center gap-1.5 uppercase tracking-wide">
+                  <BarChart2 className="w-4 h-4 text-cyan-400" /> Cobertura de Permisos por Rol
+                </h3>
+              </div>
+              <div className="h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={[
+                    { subject: 'Lectura', ADMIN: 100, SUPERVISOR: 100, OPERATOR: 100 },
+                    { subject: 'Crear', ADMIN: 100, SUPERVISOR: 100, OPERATOR: 0 },
+                    { subject: 'Editar', ADMIN: 100, SUPERVISOR: 100, OPERATOR: 0 },
+                    { subject: 'Eliminar', ADMIN: 100, SUPERVISOR: 0, OPERATOR: 0 },
+                    { subject: 'Exportar', ADMIN: 100, SUPERVISOR: 100, OPERATOR: 0 },
+                    { subject: 'Ética', ADMIN: 100, SUPERVISOR: 100, OPERATOR: 100 },
+                  ]}>
+                    <PolarGrid stroke="#1e293b" />
+                    <PolarAngleAxis dataKey="subject" stroke="#94a3b8" fontSize={9} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" fontSize={8} />
+                    <Radar name="Cobertura %" dataKey="ADMIN" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.4} />
+                    <Tooltip contentStyle={{ backgroundColor: '#090d16', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>
